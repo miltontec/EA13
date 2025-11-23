@@ -5358,6 +5358,11 @@ double GetAgentWeight(int agent_id) {
         return (double)(wins + 1) / (double)(trades + 2);
     }
 
+    int GetAgentTrades(int agent_id) {
+        if(agent_id < 0 || agent_id >= QUANTUM_MAX_AGENTS) return 0;
+        return m_agentStats[agent_id].trades;
+    }
+
     string GetAgentPrivilegeLevel(int agent_id) {
         if(agent_id < 0 || agent_id >= QUANTUM_MAX_AGENTS) return "Novice";
         
