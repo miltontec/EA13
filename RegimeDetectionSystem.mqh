@@ -182,12 +182,36 @@ public:
         // Determinar régimen basado en métricas
         ENUM_MARKET_REGIME detectedRegime = ClassifyRegime(m_currentMetrics);
         
-        // Verificar si hay cambio de régimen
+        // FIX CRÍTICO: Verificar cambio de régimen con confirmaciones múltiples
+        static int confirmationCount = 0;
+        static ENUM_MARKET_REGIME pendingRegime = REGIME_RANGING;
+
         if(detectedRegime != m_currentRegime)
         {
             double confidence = CalculateRegimeConfidence(detectedRegime);
-            
-            if(confidence > m_transitionThreshold)
+
+            // FIX: Ajustar threshold por duración del régimen actual
+            double adjustedThreshold = m_transitionThreshold;
+
+            // Si el régimen actual es muy joven, exigir más confianza
+            if(m_barsInRegime < 10) {
+                adjustedThreshold = 0.85;  // Muy joven: 85% confianza
+            } else if(m_barsInRegime < 50) {
+                adjustedThreshold = 0.80;  // Joven: 80% confianza
+            }
+
+            // FIX: Contador de confirmaciones
+            if(detectedRegime == pendingRegime) {
+                confirmationCount++;
+            } else {
+                pendingRegime = detectedRegime;
+                confirmationCount = 1;
+            }
+
+            // FIX: Requiere 3-5 confirmaciones consecutivas
+            int requiredConfirmations = (m_barsInRegime < 20) ? 5 : 3;
+
+            if(confidence > adjustedThreshold && confirmationCount >= requiredConfirmations)
             {
                 // Cambio de régimen confirmado
                 OnRegimeChange(m_currentRegime, detectedRegime);
@@ -195,11 +219,15 @@ public:
                 m_currentRegime = detectedRegime;
                 m_regimeStartTime = TimeCurrent();
                 m_barsInRegime = 0;
+                confirmationCount = 0;
+                pendingRegime = REGIME_RANGING;
             }
         }
         else
         {
             m_barsInRegime++;
+            confirmationCount = 0;  // Reset confirmaciones si se mantiene el régimen
+            pendingRegime = REGIME_RANGING;
         }
     }
     

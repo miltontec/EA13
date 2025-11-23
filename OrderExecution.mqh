@@ -960,28 +960,41 @@ bool OrderExecution::UpdateCycleTrailing()
     // Calcular el nuevo nivel de trailing
     double newTrailingLevel = CalculateCycleTrailingStop(currentPrice);
     
+    // FIX CRÍTICO: Filtro de movimiento mínimo para evitar trailing hiperactivo
+    double minMovement = MathMax(10 * _Point, GetATRValue() * 0.1);
+
     // Verificar si debemos actualizar
     bool shouldUpdate = false;
-    
+
     if(m_multiOrder.direction == DIRECTION_BUY)
     {
         // Para BUY: el nuevo SL debe ser mayor que el actual
-        if(newTrailingLevel > m_multiOrder.cycleTrailingLevel || 
+        if(newTrailingLevel > m_multiOrder.cycleTrailingLevel ||
            m_multiOrder.cycleTrailingLevel == 0)
         {
-            shouldUpdate = true;
+            // FIX: Solo actualizar si el movimiento es significativo
+            if(m_multiOrder.cycleTrailingLevel == 0 ||
+               MathAbs(newTrailingLevel - m_multiOrder.cycleTrailingLevel) >= minMovement)
+            {
+                shouldUpdate = true;
+            }
         }
     }
     else
     {
         // Para SELL: el nuevo SL debe ser menor que el actual
-        if(newTrailingLevel < m_multiOrder.cycleTrailingLevel || 
+        if(newTrailingLevel < m_multiOrder.cycleTrailingLevel ||
            m_multiOrder.cycleTrailingLevel == 0)
         {
-            shouldUpdate = true;
+            // FIX: Solo actualizar si el movimiento es significativo
+            if(m_multiOrder.cycleTrailingLevel == 0 ||
+               MathAbs(newTrailingLevel - m_multiOrder.cycleTrailingLevel) >= minMovement)
+            {
+                shouldUpdate = true;
+            }
         }
     }
-    
+
     if(shouldUpdate)
     {
         m_multiOrder.cycleTrailingLevel = newTrailingLevel;
